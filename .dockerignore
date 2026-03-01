@@ -1,0 +1,24 @@
+# Version control
+.git
+.gitignore
+
+# Build artifacts
+build/
+
+# Documentation (not needed in container)
+docs/
+*.md
+!CMakeLists.txt
+
+# Editor and IDE files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Tools (monitoring GUI, not needed for build)
+tools/
+
+# Scratch/temp
+scratch/

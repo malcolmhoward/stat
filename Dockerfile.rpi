@@ -1,0 +1,69 @@
+# Dockerfile.rpi - S.T.A.T. Production Container for Raspberry Pi (ARM64)
+#
+# Builds S.T.A.T. for Raspberry Pi with I2C device access for production deployment.
+# Target platforms: Raspberry Pi 4, Raspberry Pi 5 (64-bit OS required).
+#
+# Supports the same sensor suite as the Jetson container:
+#   - INA238 (I2C direct access)
+#   - INA3221 (sysfs/hwmon)
+#   - Daly BMS (serial)
+# ARK Electronics carrier auto-detection does not apply on RPi.
+#
+# Prerequisites:
+#   - 64-bit Raspberry Pi OS or Ubuntu for Pi
+#   - Docker installed (curl -fsSL https://get.docker.com | sh)
+#   - I2C enabled (sudo raspi-config -> Interface Options -> I2C -> Enable)
+#   - I2C bus typically at /dev/i2c-1 (check with: ls /dev/i2c-*)
+#
+# Usage:
+#   docker build -f Dockerfile.rpi -t stat:rpi .
+#   docker run --rm -it \
+#     --network host \
+#     --device=/dev/i2c-1 \
+#     stat:rpi
+
+FROM arm64v8/debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# S.T.A.T. dependencies
+RUN apt-get update && apt-get install -y \
+    libmosquitto-dev \
+    libjson-c-dev \
+    i2c-tools \
+    mosquitto \
+    mosquitto-clients \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy S.T.A.T. source
+WORKDIR /opt/stat
+COPY . .
+
+# Build S.T.A.T.
+RUN mkdir -p build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc)
+
+# Install binary
+RUN cd build && make install
+
+# Copy config files
+RUN mkdir -p /etc/oasis \
+    && cp config/stat.conf /etc/oasis/stat.conf
+
+# Default environment (overridable at runtime)
+ENV MQTT_HOST=localhost
+ENV MQTT_PORT=1883
+ENV MQTT_TOPIC=stat
+
+# Start mosquitto in background, then run S.T.A.T.
+CMD ["bash", "-c", "mosquitto -d && /usr/local/bin/oasis-stat --service --mqtt-host ${MQTT_HOST} --mqtt-port ${MQTT_PORT} --mqtt-topic ${MQTT_TOPIC}"]

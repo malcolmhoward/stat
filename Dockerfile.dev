@@ -1,0 +1,45 @@
+# Dockerfile.dev - S.T.A.T. Development/Build Container (x86/x64)
+#
+# Builds the S.T.A.T. C application with all dependencies.
+# Includes Mosquitto for MQTT testing.
+#
+# No mock hardware — S.T.A.T. C source has zero mock support for I2C sensors.
+# See meta-issue #30 for mock hardware standardization.
+#
+# Usage:
+#   docker build -f Dockerfile.dev -t stat-dev .
+#   docker run --rm -it stat-dev
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# S.T.A.T. dependencies (from CMakeLists.txt)
+RUN apt-get update && apt-get install -y \
+    libmosquitto-dev \
+    libjson-c-dev \
+    i2c-tools \
+    mosquitto \
+    mosquitto-clients \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy S.T.A.T. source
+WORKDIR /opt/stat
+COPY . .
+
+# Build S.T.A.T.
+RUN mkdir -p build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc)
+
+# Start mosquitto in background, then drop to shell
+CMD ["bash", "-c", "mosquitto -d && echo 'S.T.A.T. build complete. Binary at /opt/stat/build/oasis-stat' && exec bash"]

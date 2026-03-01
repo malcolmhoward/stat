@@ -1,0 +1,62 @@
+# Dockerfile.jetson - S.T.A.T. Production Container for NVIDIA Jetson
+#
+# Builds S.T.A.T. for Jetson with I2C device access for production deployment.
+# Target platforms: Jetson Nano, Orin Nano, Xavier NX.
+#
+# Prerequisites:
+#   - JetPack SDK installed on host
+#   - NVIDIA Docker runtime (nvidia-docker2)
+#   - I2C bus configured (default: /dev/i2c-7 for ARK carriers)
+#
+# Usage:
+#   docker build -f Dockerfile.jetson -t stat:jetson .
+#   docker run --rm -it \
+#     --network host \
+#     --device=/dev/i2c-7 \
+#     stat:jetson
+
+FROM nvcr.io/nvidia/l4t-base:r35.4.1
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# S.T.A.T. dependencies
+RUN apt-get update && apt-get install -y \
+    libmosquitto-dev \
+    libjson-c-dev \
+    i2c-tools \
+    mosquitto \
+    mosquitto-clients \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy S.T.A.T. source
+WORKDIR /opt/stat
+COPY . .
+
+# Build S.T.A.T.
+RUN mkdir -p build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc)
+
+# Install binary
+RUN cd build && make install
+
+# Copy config files
+RUN mkdir -p /etc/oasis \
+    && cp config/stat.conf /etc/oasis/stat.conf
+
+# Default environment (overridable at runtime)
+ENV MQTT_HOST=localhost
+ENV MQTT_PORT=1883
+ENV MQTT_TOPIC=stat
+
+# Start mosquitto in background, then run S.T.A.T.
+CMD ["bash", "-c", "mosquitto -d && /usr/local/bin/oasis-stat --service --mqtt-host ${MQTT_HOST} --mqtt-port ${MQTT_PORT} --mqtt-topic ${MQTT_TOPIC}"]
