@@ -20,7 +20,7 @@ Each Dockerfile is fully self-contained — see [ADR-0005](https://github.com/ma
 
 ### All Platforms
 
-- Docker installed and running
+- **Docker installed and running** — see [Docker Engine install guide](https://docs.docker.com/engine/install/) if needed
 - S.T.A.T. source code cloned
 
 ### NVIDIA Jetson
@@ -42,6 +42,8 @@ Each Dockerfile is fully self-contained — see [ADR-0005](https://github.com/ma
    curl -fsSL https://get.docker.com | sh
    sudo usermod -aG docker $USER  # re-login after
    ```
+   For alternative install methods or if the script fails, see the
+   [Docker Engine install guide](https://docs.docker.com/engine/install/).
 3. **I2C enabled**: `sudo raspi-config` → Interface Options → I2C → Enable
 4. **I2C bus** typically at `/dev/i2c-1` (verify with `ls /dev/i2c-*`)
 
