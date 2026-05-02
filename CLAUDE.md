@@ -163,6 +163,43 @@ Currently manual testing on hardware. Key verification:
 - systemd service: Runs as `oasis` user with `ProtectSystem=full`, `NoNewPrivileges=true`
 - No secrets in source code — MQTT config via environment file
 
+## Deployment
+
+### Docker
+
+S.T.A.T. provides two Dockerfiles following the [ADR-0005](https://github.com/malcolmhoward/the-oasis-project-meta-repo/blob/main/coordination/decisions/adr/0005-dockerfile-independence.md) independent Dockerfiles pattern:
+
+| Dockerfile | Base | Target | Use Case |
+|-----------|------|--------|----------|
+| `Dockerfile.dev` | `ubuntu:22.04` | x86/x64 | Build verification, CI/CD |
+| `Dockerfile.jetson` | `nvcr.io/nvidia/l4t-base:r35.4.1` | NVIDIA Jetson | Production with I2C access |
+
+Quick start:
+```bash
+# Dev build verification
+docker build -f Dockerfile.dev -t stat-dev .
+docker run --rm -it stat-dev
+
+# Jetson production
+docker build -f Dockerfile.jetson -t stat:jetson .
+docker run --rm -it --network host --device=/dev/i2c-7 stat:jetson
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for full documentation.
+
+### Native Installation
+
+The existing `install.sh` handles full native deployment:
+- Builds with CMake (Release mode)
+- Creates `oasis` system user
+- Configures I2C and serial group permissions
+- Installs systemd service (`config/oasis-stat.service`)
+- Installs MQTT config (`config/stat.conf` → `/etc/oasis/stat.conf`)
+
+### Mock Hardware
+
+No mock hardware support exists yet. I2C sensors require physical hardware. See meta-issue #30 for mock hardware standardization plans.
+
 ---
 
 *For contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).*

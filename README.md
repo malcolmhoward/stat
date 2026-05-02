@@ -22,9 +22,34 @@ Designed for extensibility, STAT serves as the diagnostic heartbeat of the suitâ
 - **System Monitoring**: CPU usage, memory usage, and fan speed tracking
 - **Service Mode**: Can run as a background service with systemd integration
 
-## Building
+## Getting Started
 
-### Prerequisites
+### Docker (Recommended for Development)
+
+```bash
+# Build and verify compilation (x86/x64)
+docker build -f Dockerfile.dev -t stat-dev .
+docker run --rm -it stat-dev
+
+# Production on Jetson (with I2C sensor access)
+docker build -f Dockerfile.jetson -t stat:jetson .
+docker run --rm -it --network host --device=/dev/i2c-7 stat:jetson
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for full Docker documentation.
+
+### Native Installation
+
+```bash
+# For complete installation with systemd service
+sudo ./install.sh
+```
+
+The install script builds S.T.A.T., creates the `oasis` system user, configures I2C and serial permissions, installs the systemd service, and sets up the MQTT config file.
+
+### Manual Build
+
+#### Prerequisites
 
 - Linux system with I2C support
 - GCC compiler
@@ -33,7 +58,7 @@ Designed for extensibility, STAT serves as the diagnostic heartbeat of the suitâ
 - Mosquitto MQTT client libraries
 - json-c library
 
-### CMake Build
+#### CMake Build
 
 ```bash
 # Create build directory
@@ -45,12 +70,8 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 # Build
 make -j$(nproc)
 
-# Installation (basic)
+# Install binary only
 sudo make install
-
-# For complete installation with service setup
-cd ..
-sudo ./install.sh
 ```
 
 ## Usage
